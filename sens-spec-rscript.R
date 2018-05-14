@@ -284,10 +284,10 @@ library(plotly)
 graphData <- list(cutoff1 = class1Conf$cutoff, class1sens = class1Conf$sens, class1spec = class1Conf$spec, 
 #classifier 2 ommitted due to different row length # cutoff2 = class2Conf$X1, class2sens = class2Conf$X2, class2spec = class2Conf$X3, 
                   class3sens = class3Conf$sens, class3spec = class3Conf$spec, 
-                  class4sens = class4Conf$sens, class4spec = class4Conf$spec, 
-                  class5sens =  class5Conf$sens, class5spec = class5Conf$spec, 
-          class5updatedsens =  class5updatedConf$sens, class5updatedspec = class5updatedConf$spec, 
-          class6updatedsens = class6Confupdated$sens, class6updatedspec = class6Confupdated$spec)
+                  class4sens = class4Conf$sens, class41spec = 1-class4Conf$spec, 
+                  class5sens =  class5Conf$sens, class51spec = 1-class5Conf$spec, 
+          class5updatedsens =  class5updatedConf$sens, class51updatedspec = 1-class5updatedConf$spec, 
+          class6updatedsens = class6Confupdated$sens, class61updatedspec = 1-class6Confupdated$spec)
 
 dataGraph<- as.data.frame(graphData)
 row.names(dataGraph) <- graphData$cutoff1
@@ -334,24 +334,84 @@ add_trace(x=~class5spec[2:95], y = ~class5sens[2:95],
 ##print plot
 p
 
+## annotations for graphs
+class_4_anno <- list(
+  xref = 'x',
+  yref = 'y',
+  x = dataGraph$class41spec[8],
+  y = dataGraph$class4sens[8],
+  xanchor = 'right',
+  yanchor = 'top',
+  text = ~paste('Cut-Off: 0.07'),
+  font = list(family = 'Arial',
+              size = 10,
+              color = 'rgba(67,67,67,1)'),
+  showarrow = FALSE)
+
+
+class_5_anno <- list(
+  xref = 'x',
+  yref = 'y',
+  x = dataGraph$class51spec[11],
+  y = dataGraph$class5sens[11],
+  xanchor = 'right',
+  yanchor = 'bottom',
+  text = ~paste('Cut-Off: 0.1'),
+  font = list(family = 'Arial',
+              size = 10,
+              color = 'rgba(67,67,67,1)'),
+  showarrow = FALSE)
+
+
+
+
+
+## build updated plot - post reviewers comments
+p2 <- plot_ly(dataGraph, x=~class51spec[2:100], y = ~class5sens[2:100], 
+              name = 'Approach 1', type = 'scatter', mode='lines',
+              text = paste("Cut-Off Value: ", row.names(dataGraph[2:100,]), 
+                           "<br>Sensitivity: ", dataGraph$class5sens[2:100],
+                           "<br>1-Specificity: ", dataGraph$class51spec[2:100]), 
+              hoverinfo='text')%>%
+  add_trace(x=~class41spec[2:100], y = ~class4sens[2:100], 
+            name = 'Approach 2', mode = 'lines',
+            text = paste("Cut-Off Value: ", row.names(dataGraph[2:100,]), 
+                         "<br>Sensitivity: ", dataGraph$class4sens[2:100],
+                         "<br>1-Specificity: ", dataGraph$class41spec[2:100]), 
+            hoverinfo='text')%>%
+  add_trace(x = dataGraph$class41spec[8],  y = dataGraph$class4sens[8], showlegend = FALSE,
+  type = 'scatter', mode = 'markers', marker = list(color = 'rgba(67,67,67,1)', size = 4)) %>%
+  add_trace(x = dataGraph$class51spec[11],  y = dataGraph$class5sens[11], showlegend = FALSE,
+      type = 'scatter', mode = 'markers', marker = list(color = 'rgba(67,67,67,1)', size = 4)) %>%
+    layout(title = 'Performance of Machine Learning Approaches',
+         xaxis = list(title = '1-Specificity'),
+         yaxis = list (title = 'Sensitivity'))%>%
+  layout(annotations = class_4_anno)%>%
+  layout(annotations = class_5_anno)
+
+
+##print plot
+p2
+
+
 
 
 ##plot comparing class. 5 & 6
-plot56 <- plot_ly(dataGraph, x=~class5updatedspec[2:100], y = ~class5updatedsens[2:100], 
-                  name = 'Classifier 5', mode='lines', type = 'scatter',
+plot56 <- plot_ly(dataGraph, x=~class51updatedspec[2:100], y = ~class5updatedsens[2:100], 
+                  name = 'Original Approach 1', mode='lines', type = 'scatter',
                   text = paste("Cut-Off Value: ", row.names(dataGraph[2:100,]), 
                                "<br>Sensitivity: ", dataGraph$class5sens[2:100],
-                               "<br>Specificity: ", dataGraph$class5spec[2:100]), 
+                               "<br>1-Specificity: ", dataGraph$class51spec[2:100]), 
                   hoverinfo='text'
 )%>%
-  add_trace(x=~class6updatedspec[2:100], y = ~class6updatedsens[2:100], 
-            name = 'Classifier 6', mode='lines',
+  add_trace(x=~class61updatedspec[2:100], y = ~class6updatedsens[2:100], 
+            name = 'Updated Approach 1', mode='lines',
             text = paste("Cut-Off Value: ", row.names(dataGraph[2:100,]), 
                          "<br>Sensitivity: ", dataGraph$class6updatedsens[2:100],
-                         "<br>Specificity: ", dataGraph$class6updatedspec[2:100]), 
+                         "<br>1-Specificity: ", dataGraph$class61updatedspec[2:100]), 
             hoverinfo='text')%>%
   layout(title = 'Performance of Machine Learning Classifiers on Corrected Validation Set',
-         xaxis = list(title = 'Specificity'),
+         xaxis = list(title = '1-Specificity'),
          yaxis = list (title = 'Sensitivity'))
 
 plot56
@@ -365,11 +425,13 @@ install.packages("pROC")
 library(pROC)
 library(ggplot2)
 
-rocClass5 <- roc(classifier5updated$`Inclusion Status`, classifier5updated$`0.1`, ci=TRUE, of="auc")
+rocClass5 <- roc(classifier5updated$`Inclusion Status`, classifier5updated$`0.1`, ci=TRUE, of="auc", plot = TRUE)
 rocClass5
 ci.auc(rocClass5)
 
-rocClass6 <- roc(classifier6updated$`Inclusion Status`, classifier6updated$`0.1`, ci=TRUE, of="auc")
+rocClass6 <- roc(classifier6updated$`Inclusion Status`, classifier6updated$`0.09`, ci=TRUE, of="auc")
+rocClass6
+plot.roc(rocClass6, add = TRUE)
 ci.auc(rocClass6)
 
 roc.test(rocClass5, rocClass6, reuse.auc = FALSE)
